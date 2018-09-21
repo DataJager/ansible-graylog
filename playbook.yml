@@ -1,0 +1,75 @@
+- hosts: mygroup
+  become: True
+  vars_files:
+    - "defaults/secure.yml"
+  vars:
+    es_cluster_name: graylog
+  tasks:
+    - name: Mongodb repository
+      yum_repository:
+        name: "mongodb-org-3.6"
+        description: "MongoDB repository for version 3.6"
+        baseurl: 'https://repo.mongodb.org/yum/redhat/$releasever/mongodb-org/3.6/x86_64/'
+        gpgkey: 'https://www.mongodb.org/static/pgp/server-3.6.asc'
+        gpgcheck: yes
+        enabled: yes
+    - name: install a compatible version of mongodb
+      yum:
+        name: mongodb-org-3.6.8
+        state: present
+    - name: Enable service mongod
+      service:
+        name: mongod
+        enabled: yes
+        state: restarted
+    - name: install a compatible version of java (for elasticsearch)
+      yum:
+        name: java-1.8.0-openjdk
+        state: present
+
+    - name: Elasticsearch repository
+      yum_repository:
+        name: "elasticsearch-5.x"
+        description: "Elasticsearch repository for 5.x packages"
+        baseurl: 'https://artifacts.elastic.co/packages/5.x/yum'
+        gpgkey: 'https://artifacts.elastic.co/GPG-KEY-elasticsearch'
+        gpgcheck: yes
+        enabled: yes
+    - name: install a compatible version of elasticsearch
+      yum:
+        name: elasticsearch-5.4.3
+        state: present
+    - name: Change elasticsearch.yml
+      template:
+        src: templates/elasticsearch.yml.j2
+        dest: /etc/elasticsearch/elasticsearch.yml
+    - name: Enable service elasticsearch
+      service:
+        name: elasticsearch
+        enabled: yes
+        state: restarted
+    - name: Graylog repository
+      yum_repository:
+        name: "graylog"
+        description: "graylog repository"
+        baseurl: 'https://packages.graylog2.org/repo/el/stable/2.4/$basearch/'
+        gpgkey: 'https://raw.githubusercontent.com/Graylog2/fpm-recipes/master/recipes/graylog-repository/files/rpm/RPM-GPG-KEY-graylog'
+        gpgcheck: yes
+        enabled: yes
+    - name: install graylog
+      yum:
+        name: graylog-server
+        state: present
+    - name: Change /etc/graylog/server/server.conf
+      template:
+        src: templates/graylog.server.conf.j2
+        dest: /etc/graylog/server/server.conf
+    - name: Change /etc/graylog/log4j2.xml to record all REST API calls
+      template:
+        src: templates/log4j2.xml.j2
+        dest: /etc/graylog/server/log4j2.xml
+    - name: Enable service graylog
+      service:
+        name: graylog-server
+        enabled: yes
+        state: restarted
